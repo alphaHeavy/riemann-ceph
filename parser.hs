@@ -72,10 +72,10 @@ pgmapEvents obj
   , Just (Aeson.Number kbUsed)      <- HashMap.lookup "kb_used" osdStatsSum
   , Just (Aeson.Number kbTotal)     <- HashMap.lookup "kb" osdStatsSum
 
-  = let pgt = RiemannEvent
+  = let et = RiemannEvent
           { eventTime         = putField . Just . floor $ utcTimeToPOSIXSeconds ts'
           , eventState        = mempty
-          , eventService      = putField $ Just "ceph/pgmap/pg_sum"
+          , eventService      = mempty
           , eventHost         = putField $ Just "lv1srv002"
           , eventDescription  = mempty
           , eventTags         = mempty
@@ -86,15 +86,13 @@ pgmapEvents obj
           , eventMetricF      = mempty
           }
 
-        osdt = pgt{eventService = putField $ Just "ceph/pgmap/osd_sum"}
-
-    in [ pgt{eventDescription = putField $ Just "clones", eventMetricF = putField . Just . realToFrac $ clones/objects}
-       , pgt{eventDescription = putField $ Just "copies", eventMetricF = putField . Just . realToFrac $ copies/objects}
-       , pgt{eventDescription = putField $ Just "missing", eventMetricF = putField . Just . realToFrac $ missing/objects}
-       , pgt{eventDescription = putField $ Just "degraded", eventMetricF = putField . Just . realToFrac $ degraded/objects}
-       , pgt{eventDescription = putField $ Just "unfound", eventMetricF = putField . Just . realToFrac $ unfound/objects}
-       , pgt{eventDescription = putField $ Just "recovered", eventMetricF = putField . Just . realToFrac $ recovered/objects}
-       , osdt{eventDescription = putField $ Just "fsused", eventMetricF = putField . Just . realToFrac $ kbUsed/kbTotal}
+    in [ et{eventService = putField $ Just "ceph /pgmap/pg_sum/ceph clones", eventMetricF = putField . Just . realToFrac $ clones/objects}
+       , et{eventService = putField $ Just "ceph /pgmap/pg_sum/copies", eventMetricF = putField . Just . realToFrac $ copies/objects}
+       , et{eventService = putField $ Just "ceph /pgmap/pg_sum/missing", eventMetricF = putField . Just . realToFrac $ missing/objects}
+       , et{eventService = putField $ Just "ceph /pgmap/pg_sum/degraded", eventMetricF = putField . Just . realToFrac $ degraded/objects}
+       , et{eventService = putField $ Just "ceph /pgmap/pg_sum/unfound", eventMetricF = putField . Just . realToFrac $ unfound/objects}
+       , et{eventService = putField $ Just "ceph /pgmap/pg_sum/recovered", eventMetricF = putField . Just . realToFrac $ recovered/objects}
+       , et{eventService = putField $ Just "ceph /pgmap/osd_sum/fsused", eventMetricF = putField . Just . realToFrac $ kbUsed/kbTotal}
        ]
 
   | otherwise = []
