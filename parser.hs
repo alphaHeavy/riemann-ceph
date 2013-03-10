@@ -15,7 +15,7 @@ import Data.Conduit.Internal (conduitToPipe)
 import Data.Conduit.Attoparsec (conduitParser)
 import qualified Data.Conduit.List as Cl
 import Data.Conduit.Process (proc, sourceProcess)
-import Data.Conduit.Network.UDP (getSocket, sinkSocket)
+import qualified Data.Conduit.Network.UDP as UDP
 import Data.Int
 import Data.Monoid
 import Data.ProtocolBuffers
@@ -29,6 +29,7 @@ import qualified Data.Vector as Vector
 import Data.Time
 import Data.Time.Clock.POSIX
 import System.Locale (defaultTimeLocale)
+import Network.Socket
 
 {-
 failMaybe :: a -> Maybe b -> Either a b
@@ -75,7 +76,7 @@ pgmapEvents obj
           { eventTime         = putField . Just . floor $ utcTimeToPOSIXSeconds ts'
           , eventState        = mempty
           , eventService      = putField $ Just "ceph/pgmap/pg_sum"
-          , eventHost         = putField $ Just "lv1srv002.grid.alphaheavy.net"
+          , eventHost         = putField $ Just "lv1srv002"
           , eventDescription  = mempty
           , eventTags         = mempty
           , eventTtl          = mempty
@@ -121,7 +122,7 @@ valueToMessage (_, Aeson.Object obj)
           { eventTime         = putField . Just . floor $ utcTimeToPOSIXSeconds ts'
           , eventState        = putField $ Just healthStatus
           , eventService      = putField $ Just "ceph"
-          , eventHost         = putField $ Just "lv1srv002.grid.alphaheavy.net"
+          , eventHost         = putField $ Just "lv1srv002"
           , eventDescription  = putField $ Just healthSummary
           , eventTags         = mempty
           , eventTtl          = mempty
@@ -143,7 +144,7 @@ valueToMessage (_, Aeson.Object obj)
 
 cephMon :: MonadResource m => GSource m RiemannMsg
 cephMon =
-  sourceProcess (proc "cat" ["/Source/ceph-riemann/ceph.json"])
+  sourceProcess (proc "ceph" ["report"])
     >+> conduitToPipe (conduitParser cephJson)
     >+> Cl.map valueToMessage
 
@@ -156,11 +157,11 @@ cephJson =
 
 main :: IO ()
 main = do
-  (s, _) <- getSocket "localhost" 5555
+  (s, AddrInfo{addrAddress = addr}) <- UDP.getSocket "127.0.0.1" 5555
   void . runResourceT . runPipe $ forever (cephMon >> liftIO (threadDelay 10000000))
-    -- >+> Cl.mapM_ (liftIO . print)
     >+> Cl.map (runPut . encodeMessage)
-    >+> sinkSocket s
+    >+> Cl.map (`UDP.Message` addr)
+    >+> UDP.sinkToSocket s
 
 data RiemannState = RiemannState
   { stateTime        :: Optional D1 (Value Int64)
