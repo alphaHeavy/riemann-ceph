@@ -16,7 +16,7 @@ import Data.Conduit.Attoparsec (conduitParser)
 import qualified Data.Conduit.List as Cl
 import Data.Conduit.Process (proc, sourceProcess)
 import qualified Data.Conduit.Network.UDP as UDP
-import Data.ProtocolBuffers (Signed(..), encodeMessage)
+import Data.ProtocolBuffers (encodeMessage)
 import Data.Serialize (runPut)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -36,17 +36,17 @@ parseJSONTime = parseTime defaultTimeLocale "%Y-%m-%d %H:%M:%S%Q" . T.unpack
 
 pgmapEvents :: Aeson.Object -> [Riemann.Event]
 pgmapEvents obj
-  | Just (Aeson.String ts) <- HashMap.lookup "stamp" obj
-  , Just ts' <- parseJSONTime ts
-  , Just (Aeson.Object pgStatsSum) <- HashMap.lookup "pg_stats_sum" obj
-  , Just (Aeson.Object statsSum)   <- HashMap.lookup "stat_sum" pgStatsSum
-  , Just (Aeson.Number objects)    <- HashMap.lookup "num_objects" statsSum
-  , Just (Aeson.Number clones)     <- HashMap.lookup "num_object_clones" statsSum
-  , Just (Aeson.Number copies)     <- HashMap.lookup "num_object_copies" statsSum
-  , Just (Aeson.Number missing)    <- HashMap.lookup "num_objects_missing_on_primary" statsSum
-  , Just (Aeson.Number degraded)   <- HashMap.lookup "num_objects_degraded" statsSum
-  , Just (Aeson.Number unfound)    <- HashMap.lookup "num_objects_unfound" statsSum
-  , Just (Aeson.Number recovered)  <- HashMap.lookup "num_objects_recovered" statsSum
+  | Just (Aeson.String ts)          <- HashMap.lookup "stamp" obj
+  , Just ts'                        <- parseJSONTime ts
+  , Just (Aeson.Object pgStatsSum)  <- HashMap.lookup "pg_stats_sum" obj
+  , Just (Aeson.Object statsSum)    <- HashMap.lookup "stat_sum" pgStatsSum
+  , Just (Aeson.Number objects)     <- HashMap.lookup "num_objects" statsSum
+  , Just (Aeson.Number clones)      <- HashMap.lookup "num_object_clones" statsSum
+  , Just (Aeson.Number copies)      <- HashMap.lookup "num_object_copies" statsSum
+  , Just (Aeson.Number missing)     <- HashMap.lookup "num_objects_missing_on_primary" statsSum
+  , Just (Aeson.Number degraded)    <- HashMap.lookup "num_objects_degraded" statsSum
+  , Just (Aeson.Number unfound)     <- HashMap.lookup "num_objects_unfound" statsSum
+  , Just (Aeson.Number recovered)   <- HashMap.lookup "num_objects_recovered" statsSum
 
   , Just (Aeson.Object osdStatsSum) <- HashMap.lookup "osd_stats_sum" obj
   , Just (Aeson.Number kbUsed)      <- HashMap.lookup "kb_used" osdStatsSum
@@ -71,19 +71,18 @@ pgmapEvents obj
 
 valueToMessage :: (a, Aeson.Value) -> Riemann.Msg
 valueToMessage (_, Aeson.Object obj)
-  | Just (Aeson.String ver) <- HashMap.lookup "version" obj
-  , Just (Aeson.Object healthObj) <- HashMap.lookup "health" obj
+  | Just (Aeson.String _ver)            <- HashMap.lookup "version" obj
+  , Just (Aeson.Object healthObj)       <- HashMap.lookup "health" obj
   , Just (Aeson.Array healthSummaryArr) <- HashMap.lookup "summary" healthObj
-  , Just (Aeson.String healthStatus) <- HashMap.lookup "overall_status" healthObj
-  , [Aeson.Object healthSummaryObj] <- Vector.toList healthSummaryArr
-  , Just (Aeson.String healthSummary) <- HashMap.lookup "summary" healthSummaryObj
-  -- "timestamp": "2013-03-09 22:47:03.171579",
-  , Just (Aeson.String ts) <- HashMap.lookup "timestamp" obj
-  , Just ts' <- parseJSONTime ts
-  , Just (Aeson.Object pgmap) <- HashMap.lookup "pgmap" obj
+  , Just (Aeson.String healthStatus)    <- HashMap.lookup "overall_status" healthObj
+  , [Aeson.Object healthSummaryObj]     <- Vector.toList healthSummaryArr
+  , Just (Aeson.String healthSummary)   <- HashMap.lookup "summary" healthSummaryObj
+  , Just (Aeson.String ts)              <- HashMap.lookup "timestamp" obj
+  , Just ts'                            <- parseJSONTime ts
+  , Just (Aeson.Object pgmap)           <- HashMap.lookup "pgmap" obj
 
   = let evt = def
-          & Riemann.time         .~ Just (Signed . floor $ utcTimeToPOSIXSeconds ts')
+          & Riemann.time         .~ Just (floor $ utcTimeToPOSIXSeconds ts')
           & Riemann.state        .~ Just healthStatus
           & Riemann.service      .~ Just "health"
           & Riemann.host         .~ Just "ceph"
@@ -91,7 +90,7 @@ valueToMessage (_, Aeson.Object obj)
 
     in def & Riemann.events .~ (evt:pgmapEvents pgmap)
 
-  | otherwise = undefined
+valueToMessage _ = error "Incomprehensible failure"
 
 cephMon :: MonadResource m => GSource m Riemann.Msg
 cephMon =
