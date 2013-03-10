@@ -76,7 +76,7 @@ pgmapEvents obj
           { eventTime         = putField . Just . floor $ utcTimeToPOSIXSeconds ts'
           , eventState        = mempty
           , eventService      = mempty
-          , eventHost         = putField $ Just "lv1srv002"
+          , eventHost         = putField $ Just "ceph"
           , eventDescription  = mempty
           , eventTags         = mempty
           , eventTtl          = mempty
@@ -86,13 +86,13 @@ pgmapEvents obj
           , eventMetricF      = mempty
           }
 
-    in [ et{eventService = putField $ Just "ceph /pgmap/pg_sum/ceph clones", eventMetricF = putField . Just . realToFrac $ clones/objects}
-       , et{eventService = putField $ Just "ceph /pgmap/pg_sum/copies", eventMetricF = putField . Just . realToFrac $ copies/objects}
-       , et{eventService = putField $ Just "ceph /pgmap/pg_sum/missing", eventMetricF = putField . Just . realToFrac $ missing/objects}
-       , et{eventService = putField $ Just "ceph /pgmap/pg_sum/degraded", eventMetricF = putField . Just . realToFrac $ degraded/objects}
-       , et{eventService = putField $ Just "ceph /pgmap/pg_sum/unfound", eventMetricF = putField . Just . realToFrac $ unfound/objects}
-       , et{eventService = putField $ Just "ceph /pgmap/pg_sum/recovered", eventMetricF = putField . Just . realToFrac $ recovered/objects}
-       , et{eventService = putField $ Just "ceph /pgmap/osd_sum/fsused", eventMetricF = putField . Just . realToFrac $ kbUsed/kbTotal}
+    in [ et{eventService = putField $ Just "object clones", eventMetricF = putField . Just . realToFrac $ clones/objects}
+       , et{eventService = putField $ Just "copies", eventMetricF = putField . Just . realToFrac $ copies/objects}
+       , et{eventService = putField $ Just "object missing", eventMetricF = putField . Just . realToFrac $ missing/objects}
+       , et{eventService = putField $ Just "object degraded", eventMetricF = putField . Just . realToFrac $ degraded/objects}
+       , et{eventService = putField $ Just "object unfound", eventMetricF = putField . Just . realToFrac $ unfound/objects}
+       , et{eventService = putField $ Just "object recovered", eventMetricF = putField . Just . realToFrac $ recovered/objects}
+       , et{eventService = putField $ Just "fs used", eventMetricF = putField . Just . realToFrac $ kbUsed/kbTotal}
        ]
 
   | otherwise = []
@@ -119,8 +119,8 @@ valueToMessage (_, Aeson.Object obj)
         evt = RiemannEvent
           { eventTime         = putField . Just . floor $ utcTimeToPOSIXSeconds ts'
           , eventState        = putField $ Just healthStatus
-          , eventService      = putField $ Just "ceph"
-          , eventHost         = putField $ Just "lv1srv002"
+          , eventService      = putField $ Just "health"
+          , eventHost         = putField $ Just "ceph"
           , eventDescription  = putField $ Just healthSummary
           , eventTags         = mempty
           , eventTtl          = mempty
