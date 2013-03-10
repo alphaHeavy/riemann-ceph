@@ -5,6 +5,7 @@ module Main where
 
 import Control.Applicative
 import Control.Concurrent (threadDelay)
+import Control.Exception
 import Control.Monad (forever, void)
 import Control.Monad.Trans (liftIO)
 import qualified Data.Attoparsec.ByteString as Atto
@@ -23,14 +24,56 @@ import qualified Data.Text as T
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Vector as Vector
 import Data.Time
-import Data.Time.Clock.POSIX
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import System.Locale (defaultTimeLocale)
+import System.IO
 import Network.Socket
 
 import Data.Default
 import Control.Lens
 import qualified Network.Monitoring.Riemann as Riemann
+import qualified Data.List as List
+import Options.Applicative hiding ((&))
 
+hostPortReader :: String -> Either ParseError (String, Int)
+hostPortReader x =
+  let (h, p) = List.span (/= ':') x
+  in case reads (List.drop 1 p) of
+       [(p', _)] -> Right (h, p')
+       _         -> Left (ErrorMsg "Could not parse hostname")
+
+opts :: ParserInfo ((String, Int), Int)
+opts = info (helper <*> p) m where
+  m = fullDesc
+        <> progDesc "Turn ceph's health reports into Riemann events"
+        <> header "Riemann.io client for Ceph"
+  p = (,) <$> hp <*> d
+  hp = nullOption (reader hostPortReader
+         <> long "server"
+         <> value ("127.0.0.1", 5555)
+         <> help "Riemann server:port (default: \"127.0.0.1:5555\")")
+  d = (1000000*) <$> option (long "delay"
+         <> metavar "SECONDS"
+         <> help "Delay between calls to 'ceph report'")
+
+main :: IO ()
+main = do
+  ((host, port), delay) <- execParser opts
+  hPutStrLn stderr $ "Sending reports to: " ++ host ++ ":" ++ show port
+
+  let loop = do
+        (s, AddrInfo{addrAddress = addr}) <- UDP.getSocket host port
+        void . runResourceT . runPipe $ forever (cephMon >> liftIO (threadDelay delay))
+          >+> Cl.map (runPut . encodeMessage)
+          >+> Cl.map (`UDP.Message` addr)
+          >+> UDP.sinkToSocket s
+
+  forever $ catch loop $ \ e -> do
+    hPutStrLn stderr $ "Failure: " ++ show (e :: SomeException)
+    hPutStrLn stderr "Retrying after delay"
+    threadDelay delay
+
+-- "timestamp": "2013-03-09 22:47:03.171579",
 parseJSONTime :: Text -> Maybe UTCTime
 parseJSONTime = parseTime defaultTimeLocale "%Y-%m-%d %H:%M:%S%Q" . T.unpack
 
@@ -104,11 +147,3 @@ cephJson =
       beg = Atto8.skipSpace *> Atto.string "-------- BEGIN REPORT" *> eol
       end = Atto8.skipSpace *> Atto.string "-------- END REPORT"   *> eol
   in beg *> Aeson.json' <* end
-
-main :: IO ()
-main = do
-  (s, AddrInfo{addrAddress = addr}) <- UDP.getSocket "127.0.0.1" 5555
-  void . runResourceT . runPipe $ forever (cephMon >> liftIO (threadDelay 10000000))
-    >+> Cl.map (runPut . encodeMessage)
-    >+> Cl.map (`UDP.Message` addr)
-    >+> UDP.sinkToSocket s
