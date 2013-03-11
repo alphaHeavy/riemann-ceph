@@ -68,7 +68,7 @@ main = do
           >+> Cl.map (`UDP.Message` addr)
           >+> UDP.sinkToSocket s
 
-  forever $ catch loop $ \ e -> do
+  forever . catch loop $ \ e -> do
     hPutStrLn stderr $ "Failure: " ++ show (e :: SomeException)
     hPutStrLn stderr "Retrying after delay"
     threadDelay delay
@@ -135,12 +135,20 @@ valueToMessage (_, Aeson.Object obj)
 
 valueToMessage _ = error "Incomprehensible failure"
 
+-- Run 'ceph report' and parse the output into a stream of messages
 cephMon :: MonadResource m => GSource m Riemann.Msg
 cephMon =
   sourceProcess (proc "ceph" ["report"])
     >+> conduitToPipe (conduitParser cephJson)
     >+> Cl.map valueToMessage
 
+-- The output of 'ceph report' is wrapped with some extra crap that we don't
+-- normally care about, we'll just wrap Aeson's parser and discard the excess.
+--
+-- -------- BEGIN REPORT --------
+-- {json}
+-- -------- END REPORT 3530661700 --------
+--
 cephJson :: Atto.Parser Aeson.Value
 cephJson =
   let eol = Atto.skipWhile (Prelude.not . Atto8.isEndOfLine) *> Atto8.endOfLine
