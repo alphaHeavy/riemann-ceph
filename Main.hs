@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Main where
@@ -8,32 +7,33 @@ import Control.Concurrent (threadDelay)
 import Control.Exception
 import Control.Monad (forever, void)
 import Control.Monad.Trans (liftIO)
+import qualified Data.List as List
+import Data.Time
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import Network.Socket
+import System.IO (hPutStrLn, stderr)
+import System.Locale (defaultTimeLocale)
+
+import Control.Lens
+import qualified Data.Aeson as Aeson
 import qualified Data.Attoparsec.ByteString as Atto
 import qualified Data.Attoparsec.ByteString.Char8 as Atto8
-import qualified Data.Aeson as Aeson
 import Data.Conduit
-import Data.Conduit.Internal (conduitToPipe)
 import Data.Conduit.Attoparsec (conduitParser)
+import Data.Conduit.Internal (conduitToPipe)
 import qualified Data.Conduit.List as Cl
-import Data.Conduit.Process (proc, sourceProcess)
 import qualified Data.Conduit.Network.UDP as UDP
-import Data.ProtocolBuffers (encodeMessage)
+import Data.Conduit.Process (proc, sourceProcess)
+import Data.Default (def)
+import qualified Data.HashMap.Strict as HashMap
 import Data.Serialize (runPut)
 import Data.Text (Text)
 import qualified Data.Text as T
-import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Vector as Vector
-import Data.Time
-import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
-import System.Locale (defaultTimeLocale)
-import System.IO
-import Network.Socket
-
-import Data.Default
-import Control.Lens
-import qualified Network.Monitoring.Riemann as Riemann
-import qualified Data.List as List
 import Options.Applicative hiding ((&))
+
+import Data.ProtocolBuffers (encodeMessage)
+import qualified Network.Monitoring.Riemann as Riemann
 
 hostPortReader :: String -> Either ParseError (String, Int)
 hostPortReader x =
