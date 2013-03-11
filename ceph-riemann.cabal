@@ -1,0 +1,48 @@
+name:                ceph-reimann
+version:             0.1.0
+synopsis:            Riemann.io client for Ceph
+description:
+license:             BSD3
+license-file:        LICENSE
+author:              Nathan Howell
+maintainer:          nhowell@alphaheavy.com
+homepage:            https://github.com/alphaHeavy/ceph-riemann
+bug-reports:         https://github.com/alphaHeavy/ceph-riemann/issues
+category:            Data
+
+build-type:          Simple
+cabal-version:       >= 1.10
+
+executable ceph-reimann
+  default-language:
+    Haskell2010
+  main-is:
+    Main.hs
+  build-depends:
+    base                       >= 4.5 && < 5,
+    aeson,
+    attoparsec,
+    attoparsec-conduit,
+    bytestring,
+    cereal,
+    conduit,
+    data-default,
+    old-locale,
+    optparse-applicative,
+    lens,
+    mtl,
+    network,
+    network-conduit,
+    riemann,
+    protobuf,
+    process-conduit,
+    text,
+    time,
+    unordered-containers,
+    vector
+  ghc-options:
+    -Wall
+
+source-repository head
+  type:     git
+  location: https://github.com/alphaHeavy/ceph-riemann.git
