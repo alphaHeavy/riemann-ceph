@@ -28,7 +28,7 @@ executable ceph-reimann
     conduit,
     data-default,
     old-locale,
-    optparse-applicative,
+    optparse-applicative       >= 0.6,
     lens,
     mtl,
     network,

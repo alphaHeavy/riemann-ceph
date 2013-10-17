@@ -20,7 +20,6 @@ import qualified Data.Attoparsec.ByteString as Atto
 import qualified Data.Attoparsec.ByteString.Char8 as Atto8
 import Data.Conduit
 import Data.Conduit.Attoparsec (conduitParser)
-import Data.Conduit.Internal (conduitToPipe)
 import qualified Data.Conduit.List as Cl
 import qualified Data.Conduit.Network.UDP as UDP
 import Data.Conduit.Process (proc, sourceProcess)
@@ -31,12 +30,13 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Vector as Vector
 import Options.Applicative hiding ((&))
+import Options.Applicative.Types (ReadM(ReadM))
 
 import Data.ProtocolBuffers (encodeMessage)
 import qualified Network.Monitoring.Riemann as Riemann
 
-hostPortReader :: String -> Either ParseError (String, Int)
-hostPortReader x =
+hostPortReader :: String -> ReadM (String, Int)
+hostPortReader x = ReadM $
   let (h, p) = List.span (/= ':') x
   in case reads (List.drop 1 p) of
        [(p', _)] -> Right (h, p')
