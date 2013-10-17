@@ -63,10 +63,10 @@ main = do
 
   let loop = do
         (s, AddrInfo{addrAddress = addr}) <- UDP.getSocket host port
-        void . runResourceT . runPipe $ forever (cephMon >> liftIO (threadDelay delay))
-          >+> Cl.map (runPut . encodeMessage)
-          >+> Cl.map (`UDP.Message` addr)
-          >+> UDP.sinkToSocket s
+        void . runResourceT $ forever (cephMon >> liftIO (threadDelay delay))
+          =$= Cl.map (runPut . encodeMessage)
+          =$= Cl.map (`UDP.Message` addr)
+          $$ UDP.sinkToSocket s
 
   forever . catch loop $ \ e -> do
     hPutStrLn stderr $ "Failure: " ++ show (e :: SomeException)
@@ -136,11 +136,11 @@ valueToMessage (_, Aeson.Object obj)
 valueToMessage _ = error "Incomprehensible failure"
 
 -- Run 'ceph report' and parse the output into a stream of messages
-cephMon :: MonadResource m => GSource m Riemann.Msg
+cephMon :: MonadResource m => Source m Riemann.Msg
 cephMon =
   sourceProcess (proc "ceph" ["report"])
-    >+> conduitToPipe (conduitParser cephJson)
-    >+> Cl.map valueToMessage
+    =$= conduitParser cephJson
+    =$= Cl.map valueToMessage
 
 -- The output of 'ceph report' is wrapped with some extra crap that we don't
 -- normally care about, we'll just wrap Aeson's parser and discard the excess.
