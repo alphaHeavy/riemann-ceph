@@ -167,4 +167,5 @@ cephJson =
   let eol = Atto.skipWhile (Prelude.not . Atto8.isEndOfLine) *> Atto8.endOfLine
       beg = Atto8.skipSpace *> Atto.string "-------- BEGIN REPORT" *> eol
       end = Atto8.skipSpace *> Atto.string "-------- END REPORT"   *> eol
-  in beg *> Aeson.json' <* end
+  in     beg *> Aeson.json' <* end
+     <|> Aeson.json'
