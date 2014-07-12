@@ -35,7 +35,7 @@ executable ceph-riemann
     network,
     resourcet,
     riemann,
-    protobuf,
+    protobuf                    >= 0.2,
     process-conduit,
     text,
     time,
