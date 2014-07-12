@@ -15,6 +15,7 @@ import System.IO (hPutStrLn, stderr)
 import System.Locale (defaultTimeLocale)
 
 import Control.Lens
+import Control.Monad.Trans.Resource
 import qualified Data.Aeson as Aeson
 import qualified Data.Attoparsec.ByteString as Atto
 import qualified Data.Attoparsec.ByteString.Char8 as Atto8
@@ -56,13 +57,25 @@ opts = info (helper <*> p) m where
          <> metavar "SECONDS"
          <> help "Delay between calls to 'ceph report'")
 
+-- | Attempt to connect to the given host/port using given @SocketType@.
+getSocket :: String -> Int -> SocketType -> IO (Socket, AddrInfo)
+getSocket host' port' sockettype = do
+    let hints = defaultHints {
+                          addrFlags = [AI_ADDRCONFIG]
+                        , addrSocketType = sockettype
+                        }
+    (addr:_) <- getAddrInfo (Just hints) (Just host') (Just $ show port')
+    sock <- socket (addrFamily addr) (addrSocketType addr)
+                   (addrProtocol addr)
+    return (sock, addr)
+
 main :: IO ()
 main = do
   ((host, port), delay) <- execParser opts
   hPutStrLn stderr $ "Sending reports to: " ++ host ++ ":" ++ show port
 
   let loop = do
-        (s, AddrInfo{addrAddress = addr}) <- UDP.getSocket host port
+        (s, AddrInfo{addrAddress = addr}) <- getSocket host port Datagram
         void . runResourceT $ forever (cephMon >> liftIO (threadDelay delay))
           =$= Cl.map (runPut . encodeMessage)
           =$= Cl.map (`UDP.Message` addr)
