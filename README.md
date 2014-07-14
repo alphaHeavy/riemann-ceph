@@ -5,7 +5,7 @@ Have you ever tried to monitor your Ceph cluster? Have you ever tried it... with
 
 If your curious, go ahead and build it. We won't tell anyone. Running it is simple. Boot up a Riemann instance and run this from an account and machine with the `ceph` client available:
 
-    ./ceph-reimann --delay 10
+    ./ceph-riemann --delay 10
 
 This will run `ceph report`, parse the results and ram them into Riemann with great speed. And it will do this every 10 seconds. Forever. Providing it's listening on `127.0.0.1:5555`.
 
